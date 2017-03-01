@@ -107,18 +107,18 @@ def _cached(f):
             cached_result = cache.get(key)
 
         except KeyError:
-            print "No cached result found for"+str(key)
+            print("No cached result found for"+str(key))
             result = f(*args, **kwargs)
             cache.add(key, result)
-            print "Wrapper took {}s".format(time() - t)
+            print(")Wrapper took {}s".format(time() - t))
             return result
 
         except:
             raise
 
         else:
-            print "Returning cached result"
-            print "Wrapper took {}s".format(time() - t)
+            print("Returning cached result")
+            print("Wrapper took {}s".format(time() - t))
             return cached_result
 
     return wrapper
@@ -226,7 +226,7 @@ class Database(object):
 
 
 def my_deco(f):
-    print "my_deco({})".format(f)
+    print("my_deco({})".format(f))
     return f
 
 @_cached
@@ -242,4 +242,4 @@ if __name__ == "__main__":
 
 
 
-    print "Done"
+    print("Done")

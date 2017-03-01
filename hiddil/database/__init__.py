@@ -1,2 +1,2 @@
 
-from crud_bindings_pymongo import *
+from .crud_bindings_pymongo import *

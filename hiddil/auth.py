@@ -81,7 +81,7 @@ class Authentication(object):
         # Create salt string
         salt = randomHexString()
 
-        print "Salt: {}".format(salt)
+        print(")Salt: {}".format(salt))
 
         # Create a saltItem for this key, and store in dict
         self._salted_items[pubkey_id] = self._SaltItem(public_key=public_key, salt=salt)
@@ -144,9 +144,3 @@ class Authentication(object):
             if key in self._salted_items:
                 if self._salted_items[key].expiration < time.time():
                     del self._salted_items[key]
-
-
-
-
-
-

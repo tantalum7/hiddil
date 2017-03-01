@@ -1,6 +1,6 @@
+#!/usr/bin/env python
 
-
-from flask  import Flask, render_template, request, session, g
+from flask  import Flask, render_template, request, session, g, jsonify
 from util_funcs     import GoodJsonResponse, BadJsonResponse, GenerateRandomCharString
 from block_store    import BlockStore
 from auth           import KeyNotSaltedException, SignatureVerifyFailException
@@ -35,15 +35,15 @@ def block_get():
 
     # Catch json validation error, and return a bad response
     except jsonschema.ValidationError as e:
-        return BadJsonResponse({'error':"JSON parse error : "+e.message})
+        return jsonify({'error':"JSON parse error : "+e.message}), 400
 
     # Catch key not salted error, and return a bad response
     except KeyNotSaltedException:
-        return BadJsonResponse({'error':"Key not salted"})
+        return jsonify({'error':"Key not salted"}), 400
 
     # Catch signature verification failure, and return a bad response
     except SignatureVerifyFailException:
-        return BadJsonResponse({'error':"Signature verification failed"})
+        return jsonify({'error':"Signature verification failed"}), 400
 
     # Catch any other exceptions and re-raise them
     except:
@@ -58,9 +58,9 @@ def block_get():
         else:
             data = base64.b64encode("No data")
 
-        return GoodJsonResponse({"status" : "Good request", "data" : data }, )
+        return jsonify({"status" : "Good request", "data" : data }, )
 
-    #return GoodJsonResponse({'block':BLOCKS[blockid]})
+    #return jsonfiy({'block':BLOCKS[blockid]})
 
 
 @server.route("/block", methods=['PUT'])
@@ -75,15 +75,15 @@ def block_put():
 
     # Catch json validation error, and return a bad response
     except jsonschema.ValidationError as e:
-        return BadJsonResponse({'error':"JSON parse error : "+e.message})
+        return jsonfiy({'error':"JSON parse error : "+e.message}), 400
 
     # Catch key not salted error, and return a bad response
     except KeyNotSaltedException:
-        return BadJsonResponse({'error':"Key not salted"})
+        return jsonfiy({'error':"Key not salted"}), 400
 
     # Catch signature verification failure, and return a bad response
     except SignatureVerifyFailException:
-        return BadJsonResponse({'error':"Signature verification failed"})
+        return jsonfiy({'error':"Signature verification failed"}), 400
 
     # Catch any other exceptions and re-raise them
     except:
@@ -95,7 +95,7 @@ def block_put():
         # Create block
         addr = blockstore.Put(pubkey_id=json.pubkey_id, data=json.data, expiration=json.expiration)
 
-        return GoodJsonResponse({"status" : "Block insertion complete", "insertion_address" : addr})
+        return jsonfiy({"status" : "Block insertion complete", "insertion_address" : addr})
 
 
 @server.route("/salt", methods=['GET'])
@@ -107,7 +107,7 @@ def salt_get():
 
     # Catch json validation error, and return a bad response
     except jsonschema.ValidationError as e:
-        return BadJsonResponse({'error':"JSON parse error : "+e.message})
+        return jsonfiy({'error':"JSON parse error : "+e.message}), 400
 
       # Catch any other exceptions and re-raise them
     except:
@@ -120,7 +120,7 @@ def salt_get():
         pubkey_id, encrypt_salt = blockstore.auth.createSalt( json.pubkey )
 
         # Return a good response with the pubkey id and the encrypted salt
-        return GoodJsonResponse({'pubkey_id' : pubkey_id, 'encrypt_salt' : encrypt_salt})
+        return jsonfiy({'pubkey_id' : pubkey_id, 'encrypt_salt' : encrypt_salt})
 
 
 
@@ -130,7 +130,7 @@ if __name__ == "__main__":
     server.debug = True
 
     if "angela" in sys.argv:
-        print "Angela server mode"
+        print("Angela server mode")
         server.run(host="45.58.35.135", port=80) # We're running on angela server, server has external IP on port 80
     else:
         server.run(host="localhost", port=4567)
