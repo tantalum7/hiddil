@@ -2,11 +2,11 @@
 # Library imports
 import uuid
 import time
-from Crypto.PublicKey   import RSA
-from Crypto.Cipher      import PKCS1_OAEP
-from Crypto.Signature   import PKCS1_v1_5
-from Crypto             import Signature
-from Crypto.Hash        import SHA
+from Cryptodome.PublicKey   import RSA
+from Cryptodome.Cipher      import PKCS1_OAEP
+from Cryptodome.Signature   import PKCS1_v1_5
+from Cryptodome             import Signature
+from Cryptodome.Hash        import SHA
 import base64
 
 # Project imports
@@ -111,7 +111,7 @@ class Authentication(object):
         return SHA.new(data)
 
     def publicKeyID(self, public_key):
-        return SHA.new(public_key).hexdigest()
+        return SHA.new(public_key.encode("utf-8")).hexdigest()
 
     def isSalted(self, pubkey_id):
         return pubkey_id in self._salted_items

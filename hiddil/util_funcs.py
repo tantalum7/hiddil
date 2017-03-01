@@ -17,7 +17,7 @@ def recursive_dict_update(d, u):
     return d
 
 def GenerateRandomCharString(num_chars):
-    return ''.join(random.choice(string.ascii_uppercase + string.digits)for x in xrange(32))
+    return ''.join(random.choice(string.ascii_uppercase + string.digits)for x in range(32))
 
 def ConvertCompValueIntoShorthand(value_string):
     return re.sub(r'(\d+)(?:\.(\d+))(\w).*', r"\1\3\2", value_string).upper()
