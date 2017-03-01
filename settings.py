@@ -1,0 +1,5 @@
+
+
+CHALLENGE_EXPIRE_TIME   = 120 #sec
+TRUST_EXPIRE_TIME       = 60*60 #sec
+
