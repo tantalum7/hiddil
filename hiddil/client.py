@@ -1,4 +1,4 @@
-
+#!/usr/bin/env python
 # Library imports
 import requests
 
