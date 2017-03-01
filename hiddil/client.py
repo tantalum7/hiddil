@@ -44,7 +44,7 @@ class Client(object):
             self.pubkey_id = json.get('pubkey_id')
 
             # Pull encrypted salt from json and decrypt it
-            self.salt = self.Decrypt( json.get('encrypt_salt') )
+            self.salt = self.Decrypt(json.get('encrypt_salt'))
 
             print(self.salt)
 

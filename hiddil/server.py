@@ -120,7 +120,9 @@ def salt_get():
     else:
 
         # Create salt for public key, fetch public key ID and encrypted salt
-        pubkey_id, encrypt_salt = blockstore.auth.createSalt( json.pubkey.encode("utf-8") )
+        pubkey_id, encrypt_salt = blockstore.auth.createSalt(
+            json.get("pubkey", "")
+        )
 
         # Return a good response with the pubkey id and the encrypted salt
         return jsonify({'pubkey_id' : pubkey_id, 'encrypt_salt' : encrypt_salt})

@@ -24,19 +24,12 @@ SALT_GET = { 'type'         : 'object',
                               }
             }
 
-class JsonData(object):
-    pass
-
 
 def validateJSON(json_dict, schema):
 
     # Validate json against schema
     jsonschema.validate(json_dict, schema)
 
-    # Create a JsonData object, stuff it with json dict
-    json_data = JsonData()
-    json_data.__dict__.update(json_dict)
-
     # Return the json data object
-    return json_data
+    return json_dict
 
