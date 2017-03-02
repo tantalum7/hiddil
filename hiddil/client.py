@@ -1,15 +1,15 @@
-
+#!/usr/bin/env python
 # Library imports
-from Crypto.PublicKey   import RSA
-from Crypto.Cipher      import PKCS1_OAEP
-from Crypto.Signature   import PKCS1_v1_5
-from Crypto.Hash        import SHA
+from Cryptodome.PublicKey   import RSA
+from Cryptodome.Cipher      import PKCS1_OAEP
+from Cryptodome.Signature   import PKCS1_v1_5
+from Cryptodome.Hash        import SHA
 import requests         as req
 import base64
 
 class Client(object):
 
-    def __init__(self, server_url="http://127.0.0.1:4567/", key_file="test_key"):
+    def __init__(self, server_url="http://127.0.0.1:5000/", key_file="test_key"):
 
         # Initialise class vars
         self.server_url = server_url
@@ -32,7 +32,7 @@ class Client(object):
     def requestSalt(self):
 
         # Issue JSON request
-        response = req.get( self.server_url+"salt", json={"pubkey" : self.key.exportKey("OpenSSH")} )
+        response = req.get( self.server_url+"salt", json={"pubkey" : str(self.key.exportKey("OpenSSH"))} )
 
         # Pull JSON from request response
         json = response.json()
@@ -44,9 +44,9 @@ class Client(object):
             self.pubkey_id = json.get('pubkey_id')
 
             # Pull encrypted salt from json and decrypt it
-            self.salt = self.Decrypt( json.get('encrypt_salt') )
+            self.salt = self.Decrypt(json.get('encrypt_salt'))
 
-            print self.salt
+            print(self.salt)
 
     def Encrypt(self, data):
 
@@ -96,7 +96,7 @@ class Client(object):
 
         if response:
 
-            print base64.b64decode( json.get("data") )
+            print (base64.b64decode( json.get("data") ))
 
 
     def putBlock(self, data, expiration=2592000):
@@ -137,6 +137,6 @@ if __name__ == "__main__":
 
     cli.getBlock(b1_addr)
 
-    print "done"
+    print("done")
 
 
