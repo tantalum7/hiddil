@@ -130,7 +130,7 @@ if __name__ == "__main__":
     server.debug = True
 
     if "angela" in sys.argv:
-        print "Angela server mode"
+        print("Angela server mode")
         server.run(host="45.58.35.135", port=80) # We're running on angela server, server has external IP on port 80
     else:
         server.run(host="localhost", port=4567)

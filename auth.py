@@ -22,6 +22,21 @@ class SignatureVerifyFailException(Exception):
 def randomHexString():
     return uuid.uuid1().hex
 
+
+def b64_encode(bytes_in):
+    bytes_in = bytes_in.encode("utf-8") if isinstance(bytes_in, str) else bytes_in
+    return base64.b64encode(bytes_in).decode("utf-8")
+
+
+def b64_decode(str_in, encoding=None):
+    bytes_out = base64.b64decode(str_in)
+    return bytes_out.decode(encoding) if encoding else bytes_out
+
+
+def hash(data, salt):
+    return SHA.new(data + salt)
+
+
 class Authentication(object):
 
     class _SaltItem(object):
@@ -45,18 +60,18 @@ class Authentication(object):
             raise KeyNotSaltedException()
 
         # Remove b64 encoding from their signature
-        signature = base64.b64decode(signature_b64)
+        signature = b64_decode(signature_b64, "utf-8")
 
         # If data_b64 arg was passed, remove b64 encoding from it
         if data_b64:
-            data = base64.b64decode(data_b64)
+            data = b64_decode(data_b64, "utf-8")
 
         # Grab key and salt
         key  = self._get_key_object(pubkey_id)
         salt = self._get_salt(pubkey_id)
 
         # Prepare hash of data
-        data_hash = self._hash_data(data=data, salt=salt)
+        data_hash = hash(data=data, salt=salt)
 
         # Create new signature scheme object with key
         scheme = PKCS1_v1_5.new(key)
@@ -81,7 +96,7 @@ class Authentication(object):
         # Create salt string
         salt = randomHexString()
 
-        print "Salt: {}".format(salt)
+        print( "Salt: {}".format(salt))
 
         # Create a saltItem for this key, and store in dict
         self._salted_items[pubkey_id] = self._SaltItem(public_key=public_key, salt=salt)
@@ -105,13 +120,10 @@ class Authentication(object):
         cipher = PKCS1_OAEP.new(key)
 
         # Encrypt the data, and apply base64 encoding and return
-        return base64.b64encode( cipher.encrypt(data) )
-
-    def Hash(self, data):
-        return SHA.new(data)
+        return b64_encode( cipher.encrypt(data.encode("utf-8")) )
 
     def publicKeyID(self, public_key):
-        return SHA.new(public_key).hexdigest()
+        return SHA.new(public_key.encode("utf-8")).hexdigest()
 
     def isSalted(self, pubkey_id):
         return pubkey_id in self._salted_items
@@ -129,8 +141,7 @@ class Authentication(object):
     def _get_salt(self, pubkey_id):
         return self._salted_items[pubkey_id].salt
 
-    def _hash_data(self, data, salt):
-        return SHA.new(data + salt)
+
 
     def _garbage_collection(self):
 

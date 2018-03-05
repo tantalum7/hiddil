@@ -1,11 +1,16 @@
 
 # Library imports
-from Crypto.PublicKey   import RSA
-from Crypto.Cipher      import PKCS1_OAEP
-from Crypto.Signature   import PKCS1_v1_5
-from Crypto.Hash        import SHA
-import requests         as req
+from Crypto.PublicKey import RSA
+from Crypto.Cipher import PKCS1_OAEP
+from Crypto.Signature import PKCS1_v1_5
+from Crypto.Hash import SHA
+import requests as req
 import base64
+
+# Project imports
+import auth
+
+
 
 class Client(object):
 
@@ -32,7 +37,7 @@ class Client(object):
     def requestSalt(self):
 
         # Issue JSON request
-        response = req.get( self.server_url+"salt", json={"pubkey" : self.key.exportKey("OpenSSH")} )
+        response = req.get( self.server_url+"salt", json={"pubkey" : self.key.exportKey("OpenSSH").decode("utf-8")} )
 
         # Pull JSON from request response
         json = response.json()
@@ -46,7 +51,7 @@ class Client(object):
             # Pull encrypted salt from json and decrypt it
             self.salt = self.Decrypt( json.get('encrypt_salt') )
 
-            print self.salt
+            print(self.salt)
 
     def Encrypt(self, data):
 
@@ -54,7 +59,7 @@ class Client(object):
         cipher = PKCS1_OAEP.new(self.key)
 
         # Encrypt the data, and apply base64 encoding and return
-        return base64.b64encode( cipher.encrypt(data) )
+        return auth.b64_encode(cipher.encrypt(data))
 
     def Decrypt(self, data):
 
@@ -62,10 +67,10 @@ class Client(object):
         cipher = PKCS1_OAEP.new(self.key)
 
         # Remove base64 encoding, decrypt data and return
-        return cipher.decrypt( base64.b64decode(data) )
+        return cipher.decrypt(auth.b64_decode(data)).decode("utf-8")
 
     def Hash(self, data):
-        return SHA.new(data)
+        return SHA.new(data.encode("utf-8"))
 
     def Sign(self, data):
 
@@ -76,7 +81,7 @@ class Client(object):
         signer = PKCS1_v1_5.new(self.key)
 
         # Sign the hash, apply b64 encoding and return
-        return base64.b64encode( signer.sign(data_hash) )
+        return auth.b64_encode(signer.sign(data_hash))
 
     def getBlock(self, address):
 
@@ -95,8 +100,7 @@ class Client(object):
         json = response.json()
 
         if response:
-
-            print base64.b64decode( json.get("data") )
+            print( base64.b64decode( json.get("data") ))
 
 
     def putBlock(self, data, expiration=2592000):
@@ -105,7 +109,7 @@ class Client(object):
         sig = self.Sign(data)
 
         # Apply b64 encoding to data
-        data_b64 = base64.b64encode(data)
+        data_b64 = auth.b64_encode(data)
 
         # Prepare json dict
         put_json = { "pubkey_id"    : self.pubkey_id,
@@ -124,10 +128,8 @@ class Client(object):
             return json.get("insertion_address")
 
 
+
 if __name__ == "__main__":
-
-
-
 
 
     cli = Client()
@@ -137,6 +139,6 @@ if __name__ == "__main__":
 
     cli.getBlock(b1_addr)
 
-    print "done"
+    print("done")
 
 

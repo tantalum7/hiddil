@@ -10,7 +10,7 @@ key = RSA.importKey( f.read() )
 
 get_salt = {"pubkey" : key.exportKey('OpenSSH')}
 
-print "start request"
+print("start request")
 #r = req.get("http://127.0.0.1:4567/block/10")
 
 
@@ -29,10 +29,10 @@ cipher = PKCS1_OAEP.new(key)
 
 salt = cipher.decrypt(crypt_salt)
 
-print salt
+print(salt)
 
 
-print "done"
+print("done")
 
 #f = open('mykey.pem','r')
 #key = RSA.importKey(f.read())
