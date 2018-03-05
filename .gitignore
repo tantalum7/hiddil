@@ -92,3 +92,6 @@ ENV/
 
 # Test key
 test_key
+
+# pycharm project
+.idea/
