@@ -1,43 +1,47 @@
 
 # Library imports
-from Crypto.PublicKey import RSA
-from Crypto.Cipher import PKCS1_OAEP
-from Crypto.Signature import PKCS1_v1_5
-from Crypto.Hash import SHA
-import requests as req
-import base64
+import requests
 
 # Project imports
-import auth
-
+import crypt
+from exceptions import *
 
 
 class Client(object):
 
-    def __init__(self, server_url="http://127.0.0.1:4567/", key_file="test_key"):
-
+    def __init__(self, server_url: str="http://127.0.0.1:4567/", key_file: str="test_key"):
+        """
+        Main client class, provides API to access remote hiddile storage and handle keys
+        :param server_url: url of remote hiddil server (defaults to local test server)
+        :param key_file: PEM encoded private key to access hiddil storage with TODO: Add support for passworded keys
+        """
         # Initialise class vars
         self.server_url = server_url
-        self.key_file   = key_file
-        self.pubkey_id  = None
-        self.salt       = None
+        self.pubkey_id = None
+        self.salt = None
+        self.private_key = None
 
         # Load private key
-        self.loadPrivateKey(self.key_file)
+        self.load_private_key(key_file)
 
         # Request salt before starting put/get requests and to prove server connection
-        self.requestSalt()
+        self.request_salt()
 
-    def loadPrivateKey(self, file):
-
+    def load_private_key(self, key_path: str):
+        """
+        Loads a private key from path provided
+        :param key_path: File path string to the key
+        """
         # Open key file, and parse into key object
-        with open(file, 'r') as key_file:
-            self.key = RSA.importKey( key_file.read() )
+        with open(key_path, 'r') as key_file:
+            self.private_key = crypt.PrivateKey(key_file.read())
 
-    def requestSalt(self):
-
+    def request_salt(self):
+        """
+        Requests salt from the hiddil server to use in all future transactions, stores it in class
+        """
         # Issue JSON request
-        response = req.get( self.server_url+"salt", json={"pubkey" : self.key.exportKey("OpenSSH").decode("utf-8")} )
+        response = requests.get(self.server_url + "salt", json={"pubkey": self.private_key.export_public_str()})
 
         # Pull JSON from request response
         json = response.json()
@@ -49,95 +53,79 @@ class Client(object):
             self.pubkey_id = json.get('pubkey_id')
 
             # Pull encrypted salt from json and decrypt it
-            self.salt = self.Decrypt( json.get('encrypt_salt') )
+            self.salt = crypt.decrypt(json.get('encrypt_salt'), self.private_key)
 
-            print(self.salt)
-
-    def Encrypt(self, data):
-
-        # Create cipher object
-        cipher = PKCS1_OAEP.new(self.key)
-
-        # Encrypt the data, and apply base64 encoding and return
-        return auth.b64_encode(cipher.encrypt(data))
-
-    def Decrypt(self, data):
-
-        # Create cipher object
-        cipher = PKCS1_OAEP.new(self.key)
-
-        # Remove base64 encoding, decrypt data and return
-        return cipher.decrypt(auth.b64_decode(data)).decode("utf-8")
-
-    def Hash(self, data):
-        return SHA.new(data.encode("utf-8"))
-
-    def Sign(self, data):
-
-        # Get hash of data and the
-        data_hash = self.Hash(data + self.salt)
-
-        # Prepare signing object
-        signer = PKCS1_v1_5.new(self.key)
-
-        # Sign the hash, apply b64 encoding and return
-        return auth.b64_encode(signer.sign(data_hash))
-
-    def getBlock(self, address):
+    def get_block(self, address: str) -> bytes:
+        """
+        Gets block store at address provided. Returns none if block doesn't exist or is empty
+        :param address: Globally unique address string
+        :return: bytes or None
+        """
 
         # Create signature of address
-        sig = self.Sign(address)
+        sig = crypt.sign_salted(data=address.encode("utf-8"), salt=self.salt, private_key=self.private_key)
 
         # Prepare json dict
-        get_json = { "pubkey_id"    : self.pubkey_id,
-                     "address"      : address,
-                     "signature"    : sig }
+        get_json = {"pubkey_id": self.pubkey_id,
+                    "address": address,
+                    "signature": sig}
 
         # Issue get request
-        response = req.get(self.server_url+"block", json=get_json)
+        response = requests.get(self.server_url + "block", json=get_json)
 
         # Pull json from request
         json = response.json()
 
-        if response:
-            print( base64.b64decode( json.get("data") ))
+        # Return the data
+        return crypt.b64_decode(json.get("data"))
 
-
-    def putBlock(self, data, expiration=2592000):
+    def put_block(self, data: bytes, address: str, expiration: int=2592000):
+        """
+        Puts a block into hiddil storage. If an address is provided, it overwrites the existing contents silently.
+        :param data: Data bytes to store
+        :param address: Address to store data to
+        :param expiration: Seconds until data expires and is irretrievable
+        :raises PutDataHashException if remote hash doesn't equal local (data corruption)
+        :return: Returns the address the data was inserted to
+        """
 
         # Create signature of put data
-        sig = self.Sign(data)
+        sig = crypt.sign_salted(data, self.salt, self.private_key)
 
         # Apply b64 encoding to data
-        data_b64 = auth.b64_encode(data)
+        data_b64 = crypt.b64_encode(data)
 
         # Prepare json dict
-        put_json = { "pubkey_id"    : self.pubkey_id,
-                     "data"         : data_b64,
-                     "signature"    : sig,
-                     "expiration"   : expiration }
+        put_json = {
+            "pubkey_id": self.pubkey_id,
+            "data": data_b64,
+            "address" : address,
+            "signature": sig,
+            "expiration": expiration
+        }
 
         # Issue put block request
-        response = req.put(self.server_url+"block", json=put_json)
+        response = requests.put(self.server_url+"block", json=put_json)
 
         # Pull json from request
         json = response.json()
 
-        if response:
+        # Raise exception if local and remote data hash don't match
+        if crypt.hash_bytes(data) != json.get("data_hash"):
+            raise PutDataHashException
 
-            return json.get("insertion_address")
-
+        # Return the insertion address
+        return json.get("insertion_address")
 
 
 if __name__ == "__main__":
 
-
     cli = Client()
 
-    b1_addr = cli.putBlock("Secret messsage1")
-    b2_addr = cli.putBlock("Secret messsage2")
+    b1_addr = cli.put_block("Secret messsage1".encode("utf-8"), "1f39c940213211e891fed89ef3043ca9")
+    b2_addr = cli.put_block("Secret messsage2".encode("utf-8"), "2f39c940213211e891fed89ef3043ca9")
 
-    cli.getBlock(b1_addr)
+    print(cli.get_block(b1_addr))
 
     print("done")
 

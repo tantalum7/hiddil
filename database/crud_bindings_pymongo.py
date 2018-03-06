@@ -216,6 +216,19 @@ class Database(object):
         return OperationResult(success  = mongo_result.acknowledged,
                                op_count = mongo_result.deleted_count)
 
+    def replace_one(self, filter, data, upsert=True):
+        mongo_result = self.db.replace_one(filter=filter, replacement=data, upsert=upsert)
+        return OperationResult(success= mongo_result.acknowledged,
+                               op_count=mongo_result.modified_count,
+                               inserted_ids=[mongo_result.upserted_id])
+
+    def replace_many(self, filter, data, upsert=True):
+        mongo_result = self.db.replace_many(filter=filter, replacement=data, upsert=upsert)
+        return OperationResult(success= mongo_result.acknowledged,
+                               op_count=mongo_result.modified_count,
+                               inserted_ids=[mongo_result.upserted_id])
+
+
     def id(self, id_string):
         return id_string if isinstance(id_string, objectid.ObjectId) else objectid.ObjectId(id_string)
 

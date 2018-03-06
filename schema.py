@@ -2,9 +2,10 @@
 import jsonschema
 
 BLOCK_PUT = { 'type'        : 'object',
-              'required'    : ['data', 'pubkey_id', 'signature', 'expiration'],
+              'required'    : ['data', 'pubkey_id', 'address', 'signature', 'expiration'],
               'properties'  : { 'data'                  : {'type' : 'string', 'minLength' : 8, 'maxLength' : 11000},
                                 'pubkey_id'             : {'type' : 'string', 'maxLength' : 1000},
+                                'address'               : {'type' : 'string', 'minLength' : 30, 'maxLength': 60},
                                 'signature'             : {'type' : 'string'},
                                 'expiration'            : {'type' : 'number', 'multipleOf': 1.0},
                               }
