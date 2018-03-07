@@ -1,7 +1,7 @@
 
 # Project imports
 from auth import Authentication
-from database import Database
+from storage import Database
 import crypt
 
 
