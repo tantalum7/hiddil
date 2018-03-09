@@ -14,7 +14,7 @@ class InvalidDataException(Exception): pass
 StorageBackend = Sqlite3Backend
 
 
-class Database:
+class Storage:
 
     MAX_KEY_LENGTH = 32
     MAX_DATA_LENGTH = 65536

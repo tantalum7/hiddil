@@ -1,0 +1,3 @@
+
+
+class BadBlockParametersException(Exception): pass

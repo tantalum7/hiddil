@@ -7,11 +7,11 @@ import crypt
 
 class BlockStore(object):
 
-    def __init__(self, ip_port_tuple):
+    def __init__(self, settings: dict):
 
         # Prepare main modules
         self.auth = Authentication()
-        self.db = Database(ip_port_tuple)
+        self.db = Database(settings)
 
     def put(self, pubkey_id, data, expiration, address=None):
 

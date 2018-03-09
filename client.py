@@ -101,7 +101,8 @@ class Client(object):
             "data": data_b64,
             "address" : address,
             "signature": sig,
-            "expiration": expiration
+            "expiration": expiration,
+            "sequence": 0,
         }
 
         # Issue put block request

@@ -1,6 +1,7 @@
 
 # Library imports
 from flask  import Flask, request
+from flask.ext.classy import FlaskView
 import sys
 import jsonschema
 import schema
@@ -9,6 +10,7 @@ import base64
 # Project imports
 from util_funcs import GoodJsonResponse, BadJsonResponse, GenerateRandomCharString
 from block_store import BlockStore
+from protocol import Protocol
 import crypt
 from exceptions import *
 
@@ -18,105 +20,128 @@ server = Flask(__name__)
 server.secret_key = GenerateRandomCharString(32)
 
 # Prepare block store instance
-if "angela" in sys.argv:
-    blockstore = BlockStore( ip_port_tuple=("localhost", 27027) ) # We're running on angela server, DB is local not remote
-else:
-    blockstore = BlockStore( ip_port_tuple=("45.58.35.135", 27027) )
+blockstore = BlockStore({"path": "hiddil.db"})
+protocol = Protocol()
 
-@server.route("/hello")
-def hello():
-    return "Hello World"
+class HiddilServer(FlaskView):
 
 
-@server.route("/block", methods=['GET'])
-def block_get():
+    @server.route("/hello")
+    def hello():
+        return "Hello World"
 
-    # Grab json and try to validate
-    try:
-        json = schema.validateJSON( request.get_json(), schema.BLOCK_GET )
-        public_key = blockstore.auth.get_salted_public_key(json.pubkey_id)
-        blockstore.auth.verify_signature(data=json.address.encode("utf-8"), signature_b64=json.signature, pubkey=public_key)
+    @server.route("/block", methods=['GET'])
+    def block_get():
 
-    # Catch json validation error, and return a bad response
-    except jsonschema.ValidationError as e:
-        return BadJsonResponse({'error': "JSON parse error : "+e.message})
+        # Grab json and try to validate
+        try:
+            json = schema.validateJSON( request.get_json(), schema.BLOCK_GET )
+            public_key = blockstore.auth.get_salted_public_key(json.pubkey_id)
+            blockstore.auth.verify_signature(data=json.address.encode("utf-8"), signature_b64=json.signature, pubkey=public_key)
 
-    # Catch key not salted error, and return a bad response
-    except KeyNotSaltedException:
-        return BadJsonResponse({'error': "Key not salted"})
+        # Catch json validation error, and return a bad response
+        except jsonschema.ValidationError as e:
+            return BadJsonResponse({'error': "JSON parse error : "+e.message})
 
-    # Catch signature verification failure, and return a bad response
-    except SignatureVerifyFailException:
-        return BadJsonResponse({'error': "Signature verification failed"})
+        # Catch key not salted error, and return a bad response
+        except KeyNotSaltedException:
+            return BadJsonResponse({'error': "Key not salted"})
 
-    else:
+        # Catch signature verification failure, and return a bad response
+        except SignatureVerifyFailException:
+            return BadJsonResponse({'error': "Signature verification failed"})
 
-        block = blockstore.get(pubkey_id=json.pubkey_id, address=json.address)
-
-        if block:
-            data = block.get('data')
         else:
-            data = base64.b64encode("No data")
 
-        return GoodJsonResponse({"status": "Good request", "data": data})
+            block = blockstore.get(pubkey_id=json.pubkey_id, address=json.address)
 
+            if block:
+                data = block.get('data')
+            else:
+                data = base64.b64encode("No data")
 
-@server.route("/block", methods=['PUT'])
-def block_put():
+            return GoodJsonResponse({"status": "Good request", "data": data})
 
-    # Grab JSON and try to validate
-    try:
-        json = schema.validateJSON(request.get_json(), schema.BLOCK_PUT)
-        public_key = blockstore.auth.get_salted_public_key(json.pubkey_id)
-        blockstore.auth.verify_signature(data_b64=json.data, signature_b64=json.signature, pubkey=public_key)
+    @server.route("/block", methods=['PUT'])
+    def block_put():
 
-    # Catch json validation error, and return a bad response
-    except jsonschema.ValidationError as e:
-        return BadJsonResponse({'error': "JSON parse error : "+e.message})
+        # Grab JSON and try to validate
+        try:
+            json = schema.validateJSON(request.get_json(), schema.BLOCK_PUT)
+            public_key = blockstore.auth.get_salted_public_key(json.pubkey_id)
+            blockstore.auth.verify_signature(data_b64=json.data, signature_b64=json.signature, pubkey=public_key)
 
-    # Catch key not salted error, and return a bad response
-    except KeyNotSaltedException:
-        return BadJsonResponse({'error': "Key not salted"})
+        # Catch json validation error, and return a bad response
+        except jsonschema.ValidationError as e:
+            return BadJsonResponse({'error': "JSON parse error : "+e.message})
 
-    # Catch signature verification failure, and return a bad response
-    except SignatureVerifyFailException:
-        return BadJsonResponse({'error': "Signature verification failed"})
+        # Catch key not salted error, and return a bad response
+        except KeyNotSaltedException:
+            return BadJsonResponse({'error': "Key not salted"})
 
-    # No exceptions found
-    else:
+        # Catch signature verification failure, and return a bad response
+        except SignatureVerifyFailException:
+            return BadJsonResponse({'error': "Signature verification failed"})
 
-        # Create block
-        address = blockstore.put(pubkey_id=json.pubkey_id, address=json.address, data=json.data, expiration=json.expiration)
+        # No exceptions found
+        else:
 
-        # Return a good response, with the block insertion address and data hash
-        return GoodJsonResponse({"status": "Block insertion complete", "insertion_address": address,
-                                 "data_hash": crypt.hash_bytes(crypt.b64_decode(json.data))})
+            # Create block
+            address = blockstore.put(pubkey_id=json.pubkey_id, address=json.address, data=json.data, expiration=json.expiration)
 
+            # Return a good response, with the block insertion address and data hash
+            return GoodJsonResponse({"status": "Block insertion complete", "insertion_address": address,
+                                     "data_hash": crypt.hash_bytes(crypt.b64_decode(json.data))})
 
-@server.route("/salt", methods=['GET'])
-def salt_get():
+    @server.route("/salt", methods=['GET'])
+    def salt_get():
 
-    # TODO: Implement whitelist, so we don't salt keys for all and sundry
+        # TODO: Implement whitelist, so we don't salt keys for all and sundry
 
-    try:
-        # Grab JSON and validate
-        json = schema.validateJSON(request.get_json(), schema.SALT_GET)
+        try:
+            # Grab JSON and validate
+            json = schema.validateJSON(request.get_json(), schema.SALT_GET)
 
-    # Catch json validation error, and return a bad response
-    except jsonschema.ValidationError as e:
-        return BadJsonResponse({'error': "JSON parse error : "+e.message})
+        # Catch json validation error, and return a bad response
+        except jsonschema.ValidationError as e:
+            return BadJsonResponse({'error': "JSON parse error : "+e.message})
 
-    # No exceptions found
-    else:
+        # No exceptions found
+        else:
 
-        # Grab ascii public key from json, import into PublicKey object
-        pubkey = crypt.PublicKey(json.pubkey)
+            # Grab ascii public key from json, import into PublicKey object
+            pubkey = crypt.PublicKey(json.pubkey)
 
-        # Create salt for public key (encrypted)
-        encrypt_salt = blockstore.auth.create_salt(pubkey)
+            # Create salt for public key (encrypted)
+            encrypt_salt = blockstore.auth.create_salt(pubkey)
 
-        # Return a good response with the pubkey id and the encrypted salt
-        return GoodJsonResponse({'pubkey_id': pubkey.key_id, 'encrypt_salt': encrypt_salt})
+            # Return a good response with the pubkey id and the encrypted salt
+            return GoodJsonResponse({'pubkey_id': pubkey.key_id, 'encrypt_salt': encrypt_salt})
+
+    @server.route("/upload", methods=["PUT"])
+    def upload():
+
+        # Try to validate json, grab salted public key and process upload chunk
+        try:
+            json = schema.validateJSON(request.get_json(), schema.UPLOAD)
+            public_key = blockstore.auth.get_salted_public_key(json.pubkey_id)
+            protocol.upload_chunk(public_key, json.chunk_data_b64)
+
+        # Catch json validation error, and return a bad response
+        except jsonschema.ValidationError as e:
+            return BadJsonResponse({'error': "JSON parse error : " + e.message})
+
+        # Catch key not salted error, and return a bad response
+        except KeyNotSaltedException:
+            return BadJsonResponse({'error': "Key not salted"})
+
+        # No exceptions found
+        else:
+            return GoodJsonResponse({'message': 'Upload chunk successful'})
+
+    @server.route("/download", methods=["GET"])
+    def download():
+        pass
 
 
 if __name__ == "__main__":
