@@ -1,19 +1,33 @@
 
 # Library imports
+import uuid
 import time
+from Cryptodome.PublicKey   import RSA
+from Cryptodome.Cipher      import PKCS1_OAEP
+from Cryptodome.Signature   import PKCS1_v1_5
+from Cryptodome             import Signature
+from Cryptodome.Hash        import SHA
+import base64
 
 # Project imports
-import hiddil.settings as settings
-import hiddil.crypt as crypt
-from hiddil.exceptions import *
+import settings
 
+
+class KeyNotSaltedException(Exception):
+    pass
+class SignatureVerifyFailException(Exception):
+    pass
+
+
+def randomHexString():
+    return uuid.uuid1().hex
 
 class Authentication(object):
 
-    class _SaltedKey(object):
-        def __init__(self, public_key: crypt.PublicKey, salt: bytes):
+    class _SaltItem(object):
+        def __init__(self, public_key, salt=None):
             self.public_key = public_key
-            self.salt = salt
+            self.salt       = salt
             self.expiration = time.time() + settings.TRUST_EXPIRE_TIME
 
     def __init__(self):
@@ -21,90 +35,102 @@ class Authentication(object):
         # Initialise class vars
         self._salted_items = {}
 
-    def verify_signature(self, signature_b64: str, pubkey: crypt.PublicKey, data_b64: str=None, data: bytes=None):
-        """
-        Verify the signature of the data passed, and make sure its signed using an valid salt
-        :param signature_b64: Data signature, encoded as a base64 string
-        :param pubkey: Public key to verify with
-        :param data_b64: Signed data, as a base64 string (use this arg or data for raw bytes)
-        :param data: Signed data, as raw bytes
-        :raises SignatureVerifyFailException: When signature verification fails
-        :raises KeyNotSaltedException: When pubkey does not have a valid salt registered
-        """
+    def verifySignature(self, signature_b64, pubkey_id, data_b64=None, data=None):
+
         # Perform garbage collection
         self._garbage_collection()
 
-        # Get the key's salt
-        salt = self._get_salt(pubkey)
+        # If key is not salted, throw exception
+        if not self.isSalted(pubkey_id):
+            raise KeyNotSaltedException()
+
+        # Remove b64 encoding from their signature
+        signature = base64.b64decode(signature_b64)
 
         # If data_b64 arg was passed, remove b64 encoding from it
         if data_b64:
-            data = crypt.b64_decode(data_b64)
+            data = base64.b64decode(data_b64)
 
-        # Verify the signature, and check if it fails revoke the salt and raise and exception
-        if not crypt.verify_list_signature([data, salt], signature_b64=signature_b64, public_key=pubkey):
-            self.revoke_salt(pubkey)
+        # Grab key and salt
+        key  = self._get_key_object(pubkey_id)
+        salt = self._get_salt(pubkey_id)
+
+        # Prepare hash of data
+        data_hash = self._hash_data(data=data, salt=salt)
+
+        # Create new signature scheme object with key
+        scheme = PKCS1_v1_5.new(key)
+
+
+        # Verify the signature
+        result = scheme.verify(data_hash, signature)
+
+        # If the verify fails, revoke the key salt and raise exception
+        if result is False:
+            self.revokeSalt(pubkey_id)
             raise SignatureVerifyFailException
 
-    def verify_put_signature(self, signature_b64: str, pubkey: crypt.PublicKey, block_num: int, data: bytes):
-        self.verify_signature(signature_b64=signature_b64, pubkey=pubkey, data=bytes([block_num])+data)
+    def createSalt(self, public_key):
 
-    def verify_get_signature(self, signature_b64: str, pubkey: crypt.PublicKey, block_num: int):
-        self.verify_signature(signature_b64=signature_b64, pubkey=pubkey, data=bytes([block_num]))
-
-    def create_salt(self, public_key: crypt.PublicKey) -> str:
-        """
-        Creates a salt for the given public key, and registers it within the Authentication class.
-        The salt is returned encrypted to the public key given
-        :param public_key: Public key to link the salt to
-        :return: Base64 encoded, encrypted salt
-        """
         # Perform garbage collection
         self._garbage_collection()
 
-        # Create new salt, and store it in the dict (indexed by pubkey id)
-        salt_item = self._new_salt(public_key)
-        self._salted_items[public_key.key_id] = salt_item
+        # Grab the id for this public key
+        pubkey_id = self.publicKeyID(public_key)
 
-        # Encrypt the salt, and return it
-        return crypt.encrypt(salt_item.salt, public_key)
+        # Create salt string
+        salt = randomHexString()
 
-    def is_salted(self, public_key: crypt.PublicKey) -> bool:
-        """
-        Returns true if the public key passed has a valid salt registered
-        :param public_key: Public key to check is salted
-        :return: True if salted, otherwise False
-        """
-        return public_key.key_id in self._salted_items
+        print(")Salt: {}".format(salt))
 
-    def revoke_salt(self, public_key: crypt.PublicKey):
-        """
-        Revokes salt from the register for the given public key. If there isn't a valid salt, it does nothing
-        :param public_key:
-        """
-        if public_key.key_id in self._salted_items:
-            del self._salted_items[public_key.key_id]
+        # Create a saltItem for this key, and store in dict
+        self._salted_items[pubkey_id] = self._SaltItem(public_key=public_key, salt=salt)
 
-    def get_salted_public_key(self, pubkey_id: str) -> crypt.PublicKey:
-        """
-        Grabs the public key for the id passed, if its salted. Raises KeyNotSaltedException if not salted.
-        :param pubkey_id: ID of the public to fetch
-        :return: PublicKey instance
-        :raises: KeyNotSaltedException
-        """
-        try:
-            return self._salted_items[pubkey_id].public_key
-        except KeyError:
-            raise KeyNotSaltedException
+        # Encrypt the salt
+        encrypt_salt = self.Encrypt(pubkey_id=pubkey_id, data=salt)
 
-    def _get_salt(self, public_key: crypt.PublicKey):
-        try:
-            return self._salted_items[public_key.key_id].salt
-        except KeyError:
-            raise KeyNotSaltedException
+        # Return a tuple of the public key id, and the encrypted salt
+        return (pubkey_id, encrypt_salt)
 
-    def _new_salt(self, public_key: crypt.PublicKey):
-        return self._SaltedKey(public_key=public_key, salt=crypt.new_uuid().encode("utf-8"))
+    def Encrypt(self, data, pubkey_id):
+
+        # If key is not salted, throw exception
+        if not self.isSalted(pubkey_id):
+            raise KeyNotSaltedException()
+
+        # Grab key
+        key = self._get_key_object(pubkey_id)
+
+        # Create cipher object
+        cipher = PKCS1_OAEP.new(key)
+
+        # Encrypt the data, and apply base64 encoding and return
+        return base64.b64encode( cipher.encrypt(data) )
+
+    def Hash(self, data):
+        return SHA.new(data)
+
+    def publicKeyID(self, public_key):
+        return SHA.new(public_key.encode("utf-8")).hexdigest()
+
+    def isSalted(self, pubkey_id):
+        return pubkey_id in self._salted_items
+
+    def revokeSalt(self, pubkey_id):
+        if pubkey_id in self._salted_items:
+            del self._salted_items[pubkey_id]
+
+    def _get_key_object(self, pubkey_id):
+        return RSA.importKey(self._get_public_key(pubkey_id))
+
+    def _get_public_key(self, pubkey_id):
+        return self._salted_items[pubkey_id].public_key
+
+    def _get_salt(self, pubkey_id):
+        return self._salted_items[pubkey_id].salt
+
+    def _hash_data(self, data, salt):
+        return SHA.new(data + salt)
 
     def _garbage_collection(self):
 
@@ -118,9 +144,3 @@ class Authentication(object):
             if key in self._salted_items:
                 if self._salted_items[key].expiration < time.time():
                     del self._salted_items[key]
-
-
-
-
-
-
