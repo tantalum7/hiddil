@@ -2,22 +2,21 @@
 # Library imports
 from flask  import Flask, request, make_response
 import sys
-import schema
+import hiddil.schema as schema
 import json
 
 # Project imports
-from util_funcs import GenerateRandomCharString
-from block import Block
+from hiddil.block import Block
 from storage import Storage
-from transfer import Transfer
-from auth import Authentication
+from hiddil.transfer import Transfer
+from hiddil.auth import Authentication
 import crypt
-from exceptions import *
+from hiddil.exceptions import *
 
 
 # Prepare server instance
 server = Flask(__name__)
-server.secret_key = GenerateRandomCharString(32)
+#server.secret_key =
 
 # Prepare block store instance
 transfer = Transfer()

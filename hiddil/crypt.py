@@ -9,7 +9,7 @@ import base64
 import binascii
 
 # Project imports
-from exceptions import *
+from hiddil.exceptions import *
 
 
 class _RSA_Key:

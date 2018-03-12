@@ -1,12 +1,9 @@
 
-# Library imports
-import random
-
 # Project imports
-from crypt import PublicKey, b64_encode, b64_decode
+from hiddil.crypt import PublicKey, b64_encode, b64_decode
 from storage import Storage
 from storage.uid import UID
-from exceptions import *
+from hiddil.exceptions import *
 
 
 class Block:

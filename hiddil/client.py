@@ -1,10 +1,10 @@
-#!/usr/bin/env python
+
 # Library imports
 import requests
 
 # Project imports
 import crypt
-from exceptions import *
+from hiddil.exceptions import *
 
 
 class Client(object):

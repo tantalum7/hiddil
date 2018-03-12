@@ -3,11 +3,11 @@
 import time
 
 # Project imports
-from crypt import PublicKey
+from hiddil.crypt import PublicKey
 import crypt
-import settings
-from block import Block
-from exceptions import RollingHashException, UploadOverflowException
+import hiddil.settings as settings
+from hiddil.block import Block
+from hiddil.exceptions import RollingHashException, UploadOverflowException
 
 
 class Transfer:

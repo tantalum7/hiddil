@@ -1,16 +1,11 @@
 
 # Library imports
-import uuid
 import time
-from Crypto.PublicKey   import RSA
-from Crypto.Cipher      import PKCS1_OAEP
-from Crypto.Signature   import PKCS1_v1_5
-from Crypto.Hash        import SHA
 
 # Project imports
-import settings
-import crypt
-from exceptions import *
+import hiddil.settings as settings
+import hiddil.crypt as crypt
+from hiddil.exceptions import *
 
 
 class Authentication(object):
