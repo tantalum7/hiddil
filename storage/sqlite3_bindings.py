@@ -166,4 +166,8 @@ def test_sqlite3_backend():
 if __name__ == "__main__":
 
     test_sqlite3_backend()
+
+    backend = Sqlite3Backend({'path': './hiddil_sqlite3.db'})
+    backend.create()
+
     print("done")

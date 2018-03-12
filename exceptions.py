@@ -7,3 +7,5 @@ class SignatureVerifyFailException(Exception): pass
 class PutDataHashException(Exception): pass
 class RollingHashException(Exception): pass
 class UploadOverflowException(Exception): pass
+class BlockNumOutofBounds(Exception): pass
+class Base64DecodeError(Exception): pass

@@ -5,9 +5,8 @@ Storage
 
 Block
 - uid = public key id (md5 hash of public key)
-- key:value pairs
+- single binary blob
 - data can be 65K binary blob
-- Secret fields to store meta data like expiration time? (forbid keys with "__" prefix?)
 
 Server
 - Only allow get/put if the requester proves key ownership (salt database)
@@ -16,3 +15,7 @@ Server
 Client
 - Unique public key per block is annoying,
   so one master key per client, and auto handled per block keys
+
+
+
+1 public key -> several blocks with unique block number -> each block has one bin blob

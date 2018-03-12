@@ -76,5 +76,5 @@ class Storage:
 
         # Validate data
         if data is not None:
-            if not isinstance(data, bytes) or len(data) < self.MAX_DATA_LENGTH:
+            if not isinstance(data, bytes) or len(data) > self.MAX_DATA_LENGTH:
                 raise InvalidDataException

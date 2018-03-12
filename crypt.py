@@ -6,6 +6,7 @@ from Crypto.Signature import PKCS1_v1_5
 from Crypto.Hash import SHA
 import uuid
 import base64
+import binascii
 
 # Project imports
 from exceptions import *
@@ -157,15 +158,15 @@ def hash_bytes(data: bytes) -> str:
     """
     return SHA.new(data).hexdigest()
 
-def sign_salted(data: bytes, salt: bytes, private_key: PrivateKey) -> str:
+
+def sign_list(data_list: [bytes], private_key: PrivateKey) -> str:
     """
-    Wrapper for sign, that appends a salt before signing.
-    :param data: Data to sign
-    :param salt: Salt to add to data
+    Wrapper for sign, that appends a list of data objects before signing
+    :param data_list: List of data byte objects to append then sign
     :param private_key: Private RSA key to sign with
     :return:
     """
-    return sign(data=data + salt, private_key=private_key)
+    return sign(data=b''.join(data_list), private_key=private_key)
 
 
 def sign(data: bytes, private_key: PrivateKey) -> str:
@@ -201,16 +202,15 @@ def verify_signature(signed_data: bytes, signature_b64: str, public_key: PublicK
     return public_key.PKCS1_v1_5().verify(data_hash, b64_decode(signature_b64))
 
 
-def verify_salted_signature(signed_data: bytes, salt: bytes, signature_b64: str, public_key: PublicKey) -> bool:
+def verify_list_signature(data_list: [bytes], signature_b64: str, public_key: PublicKey) -> bool:
     """
-    Wrapper for verify_signature, that includes a salt
-    :param signed_data: Signed data to verify with
-    :param salt: Bytes to salt the data with before verifying
+    Wrapper for verify_signature, that appends a list of data objects before verifying
+    :param data_list: List of data bytes objects to verify with
     :param signature_b64: Signature to verify, encoded with base64
     :param public_key: Public key to verify signature against
     :return: True if signature verifies, otherwise False
     """
-    return verify_signature(signed_data=signed_data+salt, signature_b64=signature_b64, public_key=public_key)
+    return verify_signature(signed_data=b''.join(data_list), signature_b64=signature_b64, public_key=public_key)
 
 
 def new_uuid() -> str:
@@ -227,7 +227,10 @@ def b64_encode(bytes_in: bytes) -> str:
     :param bytes_in:
     :return:
     """
-    return "_B64_"+base64.b64encode(bytes_in).decode("utf-8")
+    try:
+        return "_B64_"+base64.b64encode(bytes_in).decode("utf-8")
+    except binascii.Error as e:
+        raise Base64DecodeError(str(e))
 
 
 def b64_decode(str_in: str) -> bytes:

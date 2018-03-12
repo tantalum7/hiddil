@@ -1,28 +1,33 @@
 
+# Library imports
 import jsonschema
+from jsonschema import ValidationError
+
 
 BLOCK_PUT = {'type': 'object',
-             'required': ['data', 'pubkey_id', 'address', 'signature', 'expiration'],
+             'required': ['pubkey_id', 'block_num', 'signature', 'expiration', 'chunked', 'size'],
              'properties': {'data': {'type': 'string', 'minLength': 1, 'maxLength': 1000},
                             'pubkey_id': {'type': 'string', 'maxLength': 32},
-                            'address': {'type': 'string', 'minLength': 30, 'maxLength': 60},
+                            'block_num': {'type': 'number', 'multipleOf': 1.0},
                             'signature': {'type': 'string'},
-                            'expiration': {'type': 'number', 'multipleOf': 1.0}}}
+                            'expiration': {'type': 'number', 'multipleOf': 1.0},
+                            'chunked': {'enum': [True, False]},
+                            'size': {'type': 'number', 'multipleOf': 1.0}}}
 
 BLOCK_GET = {'type': 'object',
-             'required': ['address', 'pubkey_id', 'signature'],
-             'properties': {'address': {'type': 'string', 'minLength': 32, 'maxLength': 32},
-                            'pubkey_id': {'type': 'string', 'minLength': 100, 'maxLength': 1000},
+             'required': ['block_num', 'pubkey_id', 'signature'],
+             'properties': {'block_num': {'type': 'number', 'multipleOf': 1.0},
+                            'pubkey_id': {'type': 'string', 'maxLength': 1000},
                             'signature': {'type': 'string'}}}
 
 SALT_GET = {'type': 'object',
             'required': ['pubkey'],
-            'properties': {'pubkey': {'type': 'string', 'minLength': 100, 'maxLength': 1000}}}
+            'properties': {'pubkey': {'type': 'string', 'maxLength': 1000}}}
 
 UPLOAD = {'type': 'object',
           'required': ['data_chunk_b64', 'rolling_hash', 'pubkey_id'],
           'properties': {'data_chunk_b64': {'type': 'string', 'maxLength': 1000},
-                         'rolling_hash': {'type': 'string', 'maxLength': 32},
+                         'rolling_hash': {'type': 'string', 'maxLength': 100},
                          'pubkey_id': {'type': 'string', 'maxLength': 32}}}
 
 DOWNLOAD = {'type': 'object',
@@ -30,19 +35,7 @@ DOWNLOAD = {'type': 'object',
             'properties': {'last_chunk_good': {'type': 'boolean'},
                            'pubkey_id': {'type': 'string', 'maxLength': 32}}}
 
-class JsonData(object):
-    pass
 
-
-def validateJSON(json_dict, schema):
-
-    # Validate json against schema
-    jsonschema.validate(json_dict, schema)
-
-    # Create a JsonData object, stuff it with json dict
-    json_data = JsonData()
-    json_data.__dict__.update(json_dict)
-
-    # Return the json data object
-    return json_data
-
+def validate_json(json_dict: dict, json_schema: dict):
+    jsonschema.validate(json_dict, json_schema)
+    return json_dict

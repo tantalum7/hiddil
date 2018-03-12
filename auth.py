@@ -47,10 +47,15 @@ class Authentication(object):
             data = crypt.b64_decode(data_b64)
 
         # Verify the signature, and check if it fails revoke the salt and raise and exception
-        if not crypt.verify_salted_signature(signed_data=data, salt=salt, signature_b64=signature_b64,
-                                             public_key=pubkey):
+        if not crypt.verify_list_signature([data, salt], signature_b64=signature_b64, public_key=pubkey):
             self.revoke_salt(pubkey)
             raise SignatureVerifyFailException
+
+    def verify_put_signature(self, signature_b64: str, pubkey: crypt.PublicKey, block_num: int, data: bytes):
+        self.verify_signature(signature_b64=signature_b64, pubkey=pubkey, data=bytes([block_num])+data)
+
+    def verify_get_signature(self, signature_b64: str, pubkey: crypt.PublicKey, block_num: int):
+        self.verify_signature(signature_b64=signature_b64, pubkey=pubkey, data=bytes([block_num]))
 
     def create_salt(self, public_key: crypt.PublicKey) -> str:
         """
