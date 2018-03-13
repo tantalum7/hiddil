@@ -5,7 +5,7 @@ import time
 # Project imports
 from hiddil.crypt import PublicKey
 import crypt
-import hiddil.settings as settings
+from hiddil.settings import Settings
 from hiddil.block import Block
 from hiddil.exceptions import *
 
@@ -24,7 +24,7 @@ class Transfer:
             self.public_key = public_key
             self.block = block
             self.operation = None
-            self.expire_time = time.time() + settings.TRANSFER_EXPIRE_TIME
+            self.expire_time = time.time() + Settings.TRANSFER_EXPIRE_TIME
             self.num_bytes_total = num_bytes
             self.num_bytes_done = 0
             self.rolling_hash = None

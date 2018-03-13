@@ -8,7 +8,7 @@ from Crypto.Signature   import PKCS1_v1_5
 from Crypto.Hash        import SHA
 
 # Project imports
-import hiddil.settings as settings
+from hiddil.settings import Settings
 import crypt
 from hiddil.exceptions import *
 
@@ -19,7 +19,7 @@ class Authentication(object):
         def __init__(self, public_key: crypt.PublicKey, salt: bytes):
             self.public_key = public_key
             self.salt = salt
-            self.expiration = time.time() + settings.TRUST_EXPIRE_TIME
+            self.expiration = time.time() + Settings.TRUST_EXPIRE_TIME
 
     def __init__(self):
 
