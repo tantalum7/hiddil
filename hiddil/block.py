@@ -1,4 +1,7 @@
 
+# Library imports
+import random
+
 # Project imports
 from hiddil.crypt import PublicKey, b64_encode, b64_decode
 from storage import Storage

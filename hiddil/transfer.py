@@ -7,7 +7,7 @@ from hiddil.crypt import PublicKey
 import crypt
 import hiddil.settings as settings
 from hiddil.block import Block
-from hiddil.exceptions import RollingHashException, UploadOverflowException
+from hiddil.exceptions import *
 
 
 class Transfer:

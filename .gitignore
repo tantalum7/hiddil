@@ -96,3 +96,4 @@ test_key
 # PyCharm idea folder
 .idea/
 venv36/
+*.db
